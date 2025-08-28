@@ -75,12 +75,20 @@ impl Board {
         *bitboard &= !(1 << square);
     }
     
-    pub fn set_en_passant(&mut self, square: Option<u8>) {
-        self.en_passant = square;
-    }
-    
-    pub fn set_castling_rights(&mut self, rights: u8) {
-        self.castling_rights = rights;
+    pub fn get_piece_at(&self, square: u8) -> Option<(Piece, Color)> {
+        if self.white_pawns & (1 << square) != 0 { return Some((Piece::Pawn, Color::White)); }
+        if self.white_knights & (1 << square) != 0 { return Some((Piece::Knight, Color::White)); }
+        if self.white_bishops & (1 << square) != 0 { return Some((Piece::Bishop, Color::White)); }
+        if self.white_rooks & (1 << square) != 0 { return Some((Piece::Rook, Color::White)); }
+        if self.white_queens & (1 << square) != 0 { return Some((Piece::Queen, Color::White)); }
+        if self.white_king & (1 << square) != 0 { return Some((Piece::King, Color::White)); }
+        if self.black_pawns & (1 << square) != 0 { return Some((Piece::Pawn, Color::Black)); }
+        if self.black_knights & (1 << square) != 0 { return Some((Piece::Knight, Color::Black)); }
+        if self.black_bishops & (1 << square) != 0 { return Some((Piece::Bishop, Color::Black)); }
+        if self.black_rooks & (1 << square) != 0 { return Some((Piece::Rook, Color::Black)); }
+        if self.black_queens & (1 << square) != 0 { return Some((Piece::Queen, Color::Black)); }
+        if self.black_king & (1 << square) != 0 { return Some((Piece::King, Color::Black)); }
+        None
     }
     
 }
