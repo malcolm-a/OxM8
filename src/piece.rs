@@ -1,6 +1,6 @@
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Piece {
-    Pawn(Color), Knight(Color), Bishop(Color), Rook(Color), Queen(Color), King(Color)   
+    Pawn, Knight, Bishop, Rook, Queen, King  
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
