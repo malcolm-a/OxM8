@@ -24,7 +24,7 @@ pub struct Board {
 
 impl Board {
     
-    fn new() -> Self {
+    pub fn new() -> Self {
         Self {
             white_pawns: 0,
             white_knights: 0,
