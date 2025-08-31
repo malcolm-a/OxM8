@@ -108,4 +108,50 @@ impl Board {
         None
     }
     
+    pub fn display(&self) {
+        let mut board = String::new();
+        for rank in (0..8).rev() {
+            for file in 0..8 {
+                let square = rank * 8 + file;
+                match self.get_piece_at(square) {
+                    Some((piece, color)) => board.push(piece_to_sp_char(piece, color)),
+                    None => board.push('·'),
+                }
+                board.push(' ');
+            }
+            board.push('\n');
+        }
+        println!("{}", board);
+    }
+    
+    pub fn from_fen(fen: &str) -> Self {
+        parse_fen(fen).expect("Invalid FEN string")
+    }
+    
+    pub fn get_all_pieces(&self, color: Color) -> u64 {
+        match color {
+            Color::White => self.white_pawns | self.white_knights | self.white_bishops 
+                         | self.white_rooks | self.white_queens | self.white_king,
+            Color::Black => self.black_pawns | self.black_knights | self.black_bishops 
+                         | self.black_rooks | self.black_queens | self.black_king,
+        }
+    }
+    
+    pub fn get_all_occupied(&self) -> u64 {
+        self.get_all_pieces(Color::White) | self.get_all_pieces(Color::Black)
+    }
+    
+    pub fn get_piece_squares(&self, color: Color, piece: Piece) -> Vec<u8> {
+        let mut squares = Vec::new();
+        let bitboard = self.get_bb(piece, color);
+        let mut bb = bitboard;
+
+        while bb != 0 {
+            let square = bb.trailing_zeros() as u8;
+            squares.push(square);
+            bb &= bb - 1; // Remove the least significant bit
+        }
+
+        squares
+    }
 }
