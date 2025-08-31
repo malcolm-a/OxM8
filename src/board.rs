@@ -48,7 +48,24 @@ impl Board {
         }
     }
     
-    fn bb_mut(&mut self, piece: Piece, color: Color) -> &mut u64 {
+    pub fn get_bb(&self, piece: Piece, color: Color) -> u64 {
+        match (piece, color) {
+            (Piece::Pawn, Color::White) => self.white_pawns,
+            (Piece::Knight, Color::White) => self.white_knights,
+            (Piece::Bishop, Color::White) => self.white_bishops,
+            (Piece::Rook, Color::White) => self.white_rooks,
+            (Piece::Queen, Color::White) => self.white_queens,
+            (Piece::King, Color::White) => self.white_king,
+            (Piece::Pawn, Color::Black) => self.black_pawns,
+            (Piece::Knight, Color::Black) => self.black_knights,
+            (Piece::Bishop, Color::Black) => self.black_bishops,
+            (Piece::Rook, Color::Black) => self.black_rooks,
+            (Piece::Queen, Color::Black) => self.black_queens,
+            (Piece::King, Color::Black) => self.black_king,
+        }
+    }
+    
+    fn get_bb_mut(&mut self, piece: Piece, color: Color) -> &mut u64 {
         match (piece, color) {
             (Piece::Pawn, Color::White) => &mut self.white_pawns,
             (Piece::Knight, Color::White) => &mut self.white_knights,
@@ -66,12 +83,12 @@ impl Board {
     }
 
     pub fn set_piece(&mut self, piece: Piece, color: Color, square: u8) {
-        let bitboard = self.bb_mut(piece, color);
+        let bitboard = self.get_bb_mut(piece, color);
         *bitboard |= 1 << square;
     }
     
     pub fn remove_piece(&mut self, piece: Piece, color: Color, square: u8) {
-        let bitboard = self.bb_mut(piece, color);
+        let bitboard = self.get_bb_mut(piece, color);
         *bitboard &= !(1 << square);
     }
     
