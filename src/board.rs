@@ -1,4 +1,5 @@
-use crate::piece::{Piece, Color};
+use crate::piece::{Piece, Color, piece_to_sp_char};
+use crate::fen::*;
 
 pub struct Board {
     pub white_pawns: u64,
