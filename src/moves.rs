@@ -7,9 +7,9 @@ pub enum MoveType {
     Capture,
     EnPassant,
     Castle,
-    Promotion,
+    Promotion { piece: Piece },
     Double,
-    PromotionCapture,
+    PromotionCapture { piece: Piece },
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
