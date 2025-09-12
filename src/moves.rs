@@ -81,7 +81,7 @@ impl Moves {
             if let Some((_, enemy_color)) = board.get_piece_at(capture_right) {
                 if enemy_color != color {
                     if rank == promotion_rank {
-                        add_promotions(&mut moves, square, capture_right, true);
+                        Self::add_promotions(&mut moves, square, capture_right, true);
                     } else {
                         moves.push(Moves::new(square, capture_right, MoveType::Capture));
                     }
@@ -89,15 +89,35 @@ impl Moves {
             }
         }
 
-        // TODO: En passant captures
+        // En passant captures
         if let Some(en_passant_square) = board.en_passant {
-            // Left en passant
-            if file > 0 && (square as i8 + left_capture_dir) as u8 == en_passant_square {
-                moves.push(Moves::new(square, en_passant_square, MoveType::EnPassant));
+            // Left en passant (capturing to the left)
+            if file > 0 {
+                let left_square = (square as i8 + left_capture_dir) as u8;
+                if left_square == en_passant_square {
+                    // The enemy pawn should be on the same rank as us, one file to the left
+                    let enemy_pawn_square = square - 1;
+                    let enemy_color = if color == Color::White { Color::Black } else { Color::White };
+                    if let Some((piece, pawn_color)) = board.get_piece_at(enemy_pawn_square) {
+                        if piece == Piece::Pawn && pawn_color == enemy_color {
+                            moves.push(Moves::new(square, en_passant_square, MoveType::EnPassant));
+                        }
+                    }
+                }
             }
-            // Right en passant
-            if file < 7 && (square as i8 + right_capture_dir) as u8 == en_passant_square {
-                moves.push(Moves::new(square, en_passant_square, MoveType::EnPassant));
+            // Right en passant (capturing to the right)
+            if file < 7 {
+                let right_square = (square as i8 + right_capture_dir) as u8;
+                if right_square == en_passant_square {
+                    // The enemy pawn should be on the same rank as us, one file to the right
+                    let enemy_pawn_square = square + 1;
+                    let enemy_color = if color == Color::White { Color::Black } else { Color::White };
+                    if let Some((piece, pawn_color)) = board.get_piece_at(enemy_pawn_square) {
+                        if piece == Piece::Pawn && pawn_color == enemy_color {
+                            moves.push(Moves::new(square, en_passant_square, MoveType::EnPassant));
+                        }
+                    }
+                }
             }
         }
 
@@ -116,5 +136,61 @@ impl Moves {
             // This just adds Move objects to a list - no board changes!
             moves.push(Moves::new(from, to, move_type));
         }
+    }
+
+    /// Generate all legal moves for a given color
+    pub fn generate_all_moves(board: &Board, color: Color) -> Vec<Moves> {
+        let mut all_moves = Vec::new();
+
+        // Generate pawn moves
+        let pawn_squares = board.get_piece_squares(color, Piece::Pawn);
+        for square in pawn_squares {
+            let pawn_moves = Self::pawn_moves(board, square, color);
+            all_moves.extend(pawn_moves);
+        }
+
+        // TODO: Add moves for other pieces
+
+        all_moves
+    }
+
+    /// Convert a move to simple algebraic notation
+    pub fn to_algebraic(&self) -> String {
+        let from_file = (self.from % 8) as u8 + b'a';
+        let from_rank = (self.from / 8) + 1;
+        let to_file = (self.to % 8) as u8 + b'a';
+        let to_rank = (self.to / 8) + 1;
+
+        let promotion_suffix = match self.move_type {
+            MoveType::Promotion { piece } | MoveType::PromotionCapture { piece } => {
+                match piece {
+                    Piece::Queen => "=Q",
+                    Piece::Rook => "=R",
+                    Piece::Bishop => "=B",
+                    Piece::Knight => "=N",
+                    _ => "",
+                }
+            }
+            _ => "",
+        };
+
+        format!(
+            "{}{}{}{}{}",
+            from_file as char,
+            from_rank,
+            to_file as char,
+            to_rank,
+            promotion_suffix
+        )
+    }
+
+    /// Check if a move is a promotion
+    pub fn is_promotion(&self) -> bool {
+        matches!(self.move_type, MoveType::Promotion { .. } | MoveType::PromotionCapture { .. })
+    }
+
+    /// Check if a move is a capture
+    pub fn is_capture(&self) -> bool {
+        matches!(self.move_type, MoveType::Capture | MoveType::EnPassant | MoveType::PromotionCapture { .. })
     }
 }
