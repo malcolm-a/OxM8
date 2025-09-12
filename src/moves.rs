@@ -46,7 +46,7 @@ impl Moves {
         if one_forward < 64 && board.get_piece_at(one_forward).is_none() {
             if rank == promotion_rank {
                 // Promotion
-                add_promotions(&mut moves, square, one_forward, false);
+                Self::add_promotions(&mut moves, square, one_forward, false);
             } else {
                 // Normal forward move
                 moves.push(Moves::new(square, one_forward, MoveType::Normal));
@@ -67,7 +67,7 @@ impl Moves {
             if let Some((_, enemy_color)) = board.get_piece_at(capture_left) {
                 if enemy_color != color {
                     if rank == promotion_rank {
-                        add_promotions(&mut moves, square, capture_left, true);
+                        Self::add_promotions(&mut moves, square, capture_left, true);
                     } else {
                         moves.push(Moves::new(square, capture_left, MoveType::Capture));
                     }
