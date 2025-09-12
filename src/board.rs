@@ -155,4 +155,103 @@ impl Board {
 
         squares
     }
+
+    pub fn make_move(&mut self, mv: &crate::moves::Moves) {
+        use crate::moves::MoveType;
+
+        // Get the piece being moved
+        let (piece, color) = self.get_piece_at(mv.from).expect("No piece at from square");
+
+        match mv.move_type {
+            MoveType::Normal => {
+                // Remove piece from source square
+                self.remove_piece(piece, color, mv.from);
+                // Add piece to destination square
+                self.set_piece(piece, color, mv.to);
+            },
+
+            MoveType::Capture => {
+                // Remove captured piece
+                if let Some((captured_piece, captured_color)) = self.get_piece_at(mv.to) {
+                    self.remove_piece(captured_piece, captured_color, mv.to);
+                }
+                // Remove piece from source square
+                self.remove_piece(piece, color, mv.from);
+                // Add piece to destination square
+                self.set_piece(piece, color, mv.to);
+            },
+
+            MoveType::Double => {
+                // Remove piece from source square
+                self.remove_piece(piece, color, mv.from);
+                // Add piece to destination square
+                self.set_piece(piece, color, mv.to);
+                // Set en passant square (the square the pawn passed over)
+                let en_passant_square = if color == Color::White {
+                    mv.from + 8
+                } else {
+                    mv.from - 8
+                };
+                self.en_passant = Some(en_passant_square);
+            },
+
+            MoveType::EnPassant => {
+                // Remove piece from source square
+                self.remove_piece(piece, color, mv.from);
+                // Add piece to destination square
+                self.set_piece(piece, color, mv.to);
+                // Remove the captured pawn (not on the destination square)
+                let captured_pawn_square = if color == Color::White {
+                    mv.to - 8
+                } else {
+                    mv.to + 8
+                };
+                let enemy_color = if color == Color::White { Color::Black } else { Color::White };
+                self.remove_piece(Piece::Pawn, enemy_color, captured_pawn_square);
+            },
+
+            MoveType::Promotion { piece: promoted_piece } => {
+                // Remove pawn from source square
+                self.remove_piece(Piece::Pawn, color, mv.from);
+                // Add promoted piece to destination square
+                self.set_piece(promoted_piece, color, mv.to);
+            },
+
+            MoveType::PromotionCapture { piece: promoted_piece } => {
+                // Remove captured piece
+                if let Some((captured_piece, captured_color)) = self.get_piece_at(mv.to) {
+                    self.remove_piece(captured_piece, captured_color, mv.to);
+                }
+                // Remove pawn from source square
+                self.remove_piece(Piece::Pawn, color, mv.from);
+                // Add promoted piece to destination square
+                self.set_piece(promoted_piece, color, mv.to);
+            },
+
+            MoveType::Castle => {
+                // Castle logic will be implemented later
+                todo!("Castle moves not yet implemented");
+            },
+        }
+
+        // Clear en passant if it's not a double pawn move
+        if !matches!(mv.move_type, MoveType::Double) {
+            self.en_passant = None;
+        }
+
+        // Update turn
+        self.to_move = !self.to_move;
+
+        // Update move counters
+        if color == Color::Black {
+            self.fullmove_number += 1;
+        }
+
+        // Update halfmove clock (reset on pawn moves or captures)
+        if piece == Piece::Pawn || matches!(mv.move_type, MoveType::Capture | MoveType::EnPassant | MoveType::PromotionCapture { .. }) {
+            self.halfmove_clock = 0;
+        } else {
+            self.halfmove_clock += 1;
+        }
+    }
 }
