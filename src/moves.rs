@@ -246,4 +246,37 @@ impl Moves {
         // todo!(castling rights);
         moves
     }
+
+    pub fn rook_moves(board: &Board, square: u8, color: Color) -> Vec<Moves> {
+        let mut moves = Vec::new();
+        let directions = [(1, 0), (0, 1), (-1, 0), (0, -1)];
+        let rank = square / 8;
+        let file = square % 8;
+
+        for (dr, df) in &directions {
+            let mut new_rank = rank as i8;
+            let mut new_file = file as i8;
+
+            loop {
+                new_rank += dr;
+                new_file += df;
+
+                if new_rank < 0 || new_rank >= 8 || new_file < 0 || new_file >= 8 {
+                    break;
+                }
+
+                let to_square = (new_rank * 8 + new_file) as u8;
+                if let Some((_, piece_color)) = board.get_piece_at(to_square) {
+                    if piece_color != color {
+                        moves.push(Moves::new(square, to_square, MoveType::Capture));
+                    }
+                    break; // Stop on first piece encountered
+                } else {
+                    moves.push(Moves::new(square, to_square, MoveType::Normal));
+                }
+            }
+        }
+
+        moves
+    }
 }
