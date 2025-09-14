@@ -193,4 +193,30 @@ impl Moves {
     pub fn is_capture(&self) -> bool {
         matches!(self.move_type, MoveType::Capture | MoveType::EnPassant | MoveType::PromotionCapture { .. })
     }
+
+    pub fn knight_moves(board: &Board, square: u8, color: Color) -> Vec<Moves> {
+        let mut moves = Vec::new();
+        let knight_offsets = [
+            (2, 1), (1, 2), (-1, 2), (-2, 1),
+            (-2, -1), (-1, -2), (1, -2), (2, -1),
+        ];
+        let rank = square / 8;
+        let file = square % 8;
+        for (dr, df) in &knight_offsets {
+            let new_rank = rank as i8 + dr;
+            let new_file = file as i8 + df;
+            if new_rank >= 0 && new_rank < 8 && new_file >= 0 && new_file < 8 {
+                let to_square = (new_rank * 8 + new_file) as u8;
+                if let Some((_, piece_color)) = board.get_piece_at(to_square) {
+                    if piece_color != color {
+                        let move_type = if piece_color == color { MoveType::Normal } else { MoveType::Capture };
+                        moves.push(Moves::new(square, to_square, move_type));
+                    }
+                } else {
+                    moves.push(Moves::new(square, to_square, MoveType::Normal));
+                }
+            }
+        }
+        moves
+    }
 }
