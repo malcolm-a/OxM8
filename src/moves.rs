@@ -149,7 +149,40 @@ impl Moves {
             all_moves.extend(pawn_moves);
         }
 
-        // TODO: Add moves for other pieces
+        // Generate knight moves
+        let knight_squares = board.get_piece_squares(color, Piece::Knight);
+        for square in knight_squares {
+            let knight_moves = Self::knight_moves(board, square, color);
+            all_moves.extend(knight_moves);
+        }
+
+        // Generate bishop moves
+        let bishop_squares = board.get_piece_squares(color, Piece::Bishop);
+        for square in bishop_squares {
+            let bishop_moves = Self::bishop_moves(board, square, color);
+            all_moves.extend(bishop_moves);
+        }
+
+        // Generate rook moves
+        let rook_squares = board.get_piece_squares(color, Piece::Rook);
+        for square in rook_squares {
+            let rook_moves = Self::rook_moves(board, square, color);
+            all_moves.extend(rook_moves);
+        }
+
+        // Generate queen moves
+        let queen_squares = board.get_piece_squares(color, Piece::Queen);
+        for square in queen_squares {
+            let queen_moves = Self::queen_moves(board, square, color);
+            all_moves.extend(queen_moves);
+        }
+
+        // Generate king moves (including castling)
+        let king_squares = board.get_piece_squares(color, Piece::King);
+        for square in king_squares {
+            let king_moves = Self::king_moves(board, square, color);
+            all_moves.extend(king_moves);
+        }
 
         all_moves
     }
