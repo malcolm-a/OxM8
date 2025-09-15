@@ -154,6 +154,15 @@ impl Moves {
         all_moves
     }
 
+    /// Check if a square is under attack by the enemy
+    pub fn is_square_attacked(board: &Board, square: u8, by_color: Color) -> bool {
+        // Generate all moves for the attacking color and see if any target the square
+        // let attacking_moves = Self::generate_all_moves(board, by_color);
+        // attacking_moves.iter().any(|mv| mv.to == square && mv.is_capture())
+        todo!("Implement is_square_attacked")
+    }
+
+
     /// Convert a move to simple algebraic notation
     pub fn to_algebraic(&self) -> String {
         let from_file = (self.from % 8) as u8 + b'a';
@@ -228,6 +237,8 @@ impl Moves {
         ];
         let rank = square / 8;
         let file = square % 8;
+        
+        // basic king moves
         for (dr, df) in &king_offsets {
             let new_rank = rank as i8 + dr;
             let new_file = file as i8 + df;
@@ -243,7 +254,9 @@ impl Moves {
                 }
             }
         }
-        // todo!(castling rights);
+        // castling
+        todo!("Implement castling moves");
+          
         moves
     }
 
