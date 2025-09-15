@@ -312,4 +312,13 @@ impl Moves {
 
         moves
     }
+    
+    pub fn queen_moves(board: &Board, square: u8, color: Color) -> Vec<Moves> {
+        let mut moves = Vec::new();
+
+        moves.extend(Self::rook_moves(board, square, color));
+        moves.extend(Self::bishop_moves(board, square, color));
+        
+        moves
+    }
 }
