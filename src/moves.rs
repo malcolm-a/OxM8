@@ -1,5 +1,6 @@
 use crate::board::Board;
 use crate::piece::{Color, Piece};
+use crate::util;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum MoveType {
@@ -97,7 +98,11 @@ impl Moves {
                 if left_square == en_passant_square {
                     // The enemy pawn should be on the same rank as us, one file to the left
                     let enemy_pawn_square = square - 1;
-                    let enemy_color = if color == Color::White { Color::Black } else { Color::White };
+                    let enemy_color = if color == Color::White {
+                        Color::Black
+                    } else {
+                        Color::White
+                    };
                     if let Some((piece, pawn_color)) = board.get_piece_at(enemy_pawn_square) {
                         if piece == Piece::Pawn && pawn_color == enemy_color {
                             moves.push(Moves::new(square, en_passant_square, MoveType::EnPassant));
@@ -111,7 +116,11 @@ impl Moves {
                 if right_square == en_passant_square {
                     // The enemy pawn should be on the same rank as us, one file to the right
                     let enemy_pawn_square = square + 1;
-                    let enemy_color = if color == Color::White { Color::Black } else { Color::White };
+                    let enemy_color = if color == Color::White {
+                        Color::Black
+                    } else {
+                        Color::White
+                    };
                     if let Some((piece, pawn_color)) = board.get_piece_at(enemy_pawn_square) {
                         if piece == Piece::Pawn && pawn_color == enemy_color {
                             moves.push(Moves::new(square, en_passant_square, MoveType::EnPassant));
@@ -187,43 +196,189 @@ impl Moves {
         all_moves
     }
 
-    /// Check if a square is under attack by the enemy
-    pub fn is_square_attacked(board: &Board, square: u8, by_color: Color) -> bool {
-        // Generate all moves for the attacking color and see if any target the square
-        // let attacking_moves = Self::generate_all_moves(board, by_color);
-        // attacking_moves.iter().any(|mv| mv.to == square && mv.is_capture())
-        todo!("Implement is_square_attacked")
+    /// Generate only legal moves for a given color (filters out moves that leave king in check)
+    pub fn generate_legal_moves(board: &Board, color: Color) -> Vec<Moves> {
+        let all_moves = Self::generate_all_moves(board, color);
+        all_moves
+            .into_iter()
+            .filter(|mv| Self::is_legal_move(board, mv, color))
+            .collect()
     }
 
+    /// Check if a move is legal (doesn't leave own king in check)
+    pub fn is_legal_move(board: &Board, mv: &Moves, color: Color) -> bool {
+        // Make the move on a copy of the board
+        let mut test_board = *board;
+        test_board.make_move(mv);
+
+        // Find our king position after the move
+        let king_squares = test_board.get_piece_squares(color, Piece::King);
+        if let Some(&king_square) = king_squares.first() {
+            let enemy_color = if color == Color::White {
+                Color::Black
+            } else {
+                Color::White
+            };
+            // Check if our king is attacked after the move
+            !Self::is_square_attacked(&test_board, king_square, enemy_color)
+        } else {
+            // If we don't have a king, the move is illegal
+            false
+        }
+    }
+
+    /// Check if the current player is in check
+    pub fn is_in_check(board: &Board, color: Color) -> bool {
+        let king_squares = board.get_piece_squares(color, Piece::King);
+        if let Some(&king_square) = king_squares.first() {
+            let enemy_color = if color == Color::White {
+                Color::Black
+            } else {
+                Color::White
+            };
+            Self::is_square_attacked(board, king_square, enemy_color)
+        } else {
+            false
+        }
+    }
+
+    /// Check if the current position is checkmate
+    pub fn is_checkmate(board: &Board, color: Color) -> bool {
+        Self::is_in_check(board, color) && Self::generate_legal_moves(board, color).is_empty()
+    }
+
+    /// Check if the current position is stalemate
+    pub fn is_stalemate(board: &Board, color: Color) -> bool {
+        !Self::is_in_check(board, color) && Self::generate_legal_moves(board, color).is_empty()
+    }
+
+    /// Check if a square is under attack by the enemy
+    pub fn is_square_attacked(board: &Board, square: u8, by_color: Color) -> bool {
+        let file = square % 8;
+        let rank = square / 8;
+
+        // Check for pawn attacks
+        let pawn_attack_dirs = match by_color {
+            Color::White => [-7, -9], // White pawns attack diagonally "down" from their perspective
+            Color::Black => [7, 9],   // Black pawns attack diagonally "up" from their perspective
+        };
+
+        for &dir in &pawn_attack_dirs {
+            let attack_square = (square as i8 - dir) as u8; // Where the attacking pawn would be
+            if attack_square < 64 {
+                let attack_file = attack_square % 8;
+                let attack_rank = attack_square / 8;
+                // Check if the move is within bounds (no wrapping around board edges)
+                if (attack_file as i8 - file as i8).abs() == 1 {
+                    if let Some((Piece::Pawn, color)) = board.get_piece_at(attack_square) {
+                        if color == by_color {
+                            return true;
+                        }
+                    }
+                }
+            }
+        }
+
+        // Check for knight attacks
+        let knight_moves = [
+            (2, 1),
+            (1, 2),
+            (-1, 2),
+            (-2, 1),
+            (-2, -1),
+            (-1, -2),
+            (1, -2),
+            (2, -1),
+        ];
+        for &(dr, df) in &knight_moves {
+            let new_rank = rank as i8 + dr;
+            let new_file = file as i8 + df;
+            if new_rank >= 0 && new_rank < 8 && new_file >= 0 && new_file < 8 {
+                let target_square = (new_rank * 8 + new_file) as u8;
+                if let Some((Piece::Knight, color)) = board.get_piece_at(target_square) {
+                    if color == by_color {
+                        return true;
+                    }
+                }
+            }
+        }
+
+        // Check for bishop/queen diagonal attacks
+        let diagonal_dirs = [(1, 1), (1, -1), (-1, 1), (-1, -1)];
+        for &(dr, df) in &diagonal_dirs {
+            let mut new_rank = rank as i8;
+            let mut new_file = file as i8;
+            loop {
+                new_rank += dr;
+                new_file += df;
+                if new_rank < 0 || new_rank >= 8 || new_file < 0 || new_file >= 8 {
+                    break;
+                }
+                let target_square = (new_rank * 8 + new_file) as u8;
+                if let Some((piece, color)) = board.get_piece_at(target_square) {
+                    if color == by_color && (piece == Piece::Bishop || piece == Piece::Queen) {
+                        return true;
+                    }
+                    break; // Stop on first piece encountered
+                }
+            }
+        }
+
+        // Check for rook/queen orthogonal attacks
+        let orthogonal_dirs = [(1, 0), (0, 1), (-1, 0), (0, -1)];
+        for &(dr, df) in &orthogonal_dirs {
+            let mut new_rank = rank as i8;
+            let mut new_file = file as i8;
+            loop {
+                new_rank += dr;
+                new_file += df;
+                if new_rank < 0 || new_rank >= 8 || new_file < 0 || new_file >= 8 {
+                    break;
+                }
+                let target_square = (new_rank * 8 + new_file) as u8;
+                if let Some((piece, color)) = board.get_piece_at(target_square) {
+                    if color == by_color && (piece == Piece::Rook || piece == Piece::Queen) {
+                        return true;
+                    }
+                    break; // Stop on first piece encountered
+                }
+            }
+        }
+
+        // Check for king attacks
+        let king_moves = [
+            (1, 0),
+            (1, 1),
+            (0, 1),
+            (-1, 1),
+            (-1, 0),
+            (-1, -1),
+            (0, -1),
+            (1, -1),
+        ];
+        for &(dr, df) in &king_moves {
+            let new_rank = rank as i8 + dr;
+            let new_file = file as i8 + df;
+            if new_rank >= 0 && new_rank < 8 && new_file >= 0 && new_file < 8 {
+                let target_square = (new_rank * 8 + new_file) as u8;
+                if let Some((Piece::King, color)) = board.get_piece_at(target_square) {
+                    if color == by_color {
+                        return true;
+                    }
+                }
+            }
+        }
+
+        false
+    }
 
     /// Convert a move to simple algebraic notation
     pub fn to_algebraic(&self) -> String {
-        let from_file = (self.from % 8) as u8 + b'a';
-        let from_rank = (self.from / 8) + 1;
-        let to_file = (self.to % 8) as u8 + b'a';
-        let to_rank = (self.to / 8) + 1;
-
-        let promotion_suffix = match self.move_type {
-            MoveType::Promotion { piece } | MoveType::PromotionCapture { piece } => {
-                match piece {
-                    Piece::Queen => "=Q",
-                    Piece::Rook => "=R",
-                    Piece::Bishop => "=B",
-                    Piece::Knight => "=N",
-                    _ => "",
-                }
-            }
-            _ => "",
+        let promotion = match self.move_type {
+            MoveType::Promotion { piece } | MoveType::PromotionCapture { piece } => Some(piece),
+            _ => None,
         };
-
-        format!(
-            "{}{}{}{}{}",
-            from_file as char,
-            from_rank,
-            to_file as char,
-            to_rank,
-            promotion_suffix
-        )
+        util::move_to_algebraic(self.from, self.to, promotion)
     }
 
     /// Check if a move is a promotion
@@ -279,17 +434,113 @@ impl Moves {
                 let to_square = (new_rank * 8 + new_file) as u8;
                 if let Some((_, piece_color)) = board.get_piece_at(to_square) {
                     if piece_color != color {
-                        let move_type = if piece_color == color { MoveType::Normal } else { MoveType::Capture };
-                        moves.push(Moves::new(square, to_square, move_type));
+                        moves.push(Moves::new(square, to_square, MoveType::Capture));
                     }
                 } else {
                     moves.push(Moves::new(square, to_square, MoveType::Normal));
                 }
             }
         }
-        // castling
-        todo!("Implement castling moves");
-          
+
+        // Castling moves
+        if !Self::is_square_attacked(
+            board,
+            square,
+            if color == Color::White {
+                Color::Black
+            } else {
+                Color::White
+            },
+        ) {
+            // Only attempt castling if king is not currently in check
+
+            // Kingside castling
+            let kingside_bit = match color {
+                Color::White => 0b0001, // White kingside (K)
+                Color::Black => 0b0100, // Black kingside (k)
+            };
+
+            if (board.castling_rights & kingside_bit) != 0 {
+                let (rook_square, squares_to_check) = match color {
+                    Color::White => (7, vec![5, 6]),    // f1, g1
+                    Color::Black => (63, vec![61, 62]), // f8, g8
+                };
+
+                // Check that squares between king and rook are empty
+                let squares_empty = squares_to_check
+                    .iter()
+                    .all(|&sq| board.get_piece_at(sq).is_none());
+
+                // Check that king doesn't pass through check
+                let no_check_path = squares_to_check.iter().all(|&sq| {
+                    !Self::is_square_attacked(
+                        board,
+                        sq,
+                        if color == Color::White {
+                            Color::Black
+                        } else {
+                            Color::White
+                        },
+                    )
+                });
+
+                // Verify rook is still there
+                let rook_present =
+                    matches!(board.get_piece_at(rook_square), Some((Piece::Rook, c)) if c == color);
+
+                if squares_empty && no_check_path && rook_present {
+                    let target_square = match color {
+                        Color::White => 6,  // g1
+                        Color::Black => 62, // g8
+                    };
+                    moves.push(Moves::new(square, target_square, MoveType::Castle));
+                }
+            }
+
+            // Queenside castling
+            let queenside_bit = match color {
+                Color::White => 0b0010, // White queenside (Q)
+                Color::Black => 0b1000, // Black queenside (q)
+            };
+
+            if (board.castling_rights & queenside_bit) != 0 {
+                let (rook_square, squares_to_check, squares_must_be_empty) = match color {
+                    Color::White => (0, vec![2, 3], vec![1, 2, 3]), // c1, d1 for check; b1, c1, d1 empty
+                    Color::Black => (56, vec![58, 59], vec![57, 58, 59]), // c8, d8 for check; b8, c8, d8 empty
+                };
+
+                // Check that squares between king and rook are empty
+                let squares_empty = squares_must_be_empty
+                    .iter()
+                    .all(|&sq| board.get_piece_at(sq).is_none());
+
+                // Check that king doesn't pass through check
+                let no_check_path = squares_to_check.iter().all(|&sq| {
+                    !Self::is_square_attacked(
+                        board,
+                        sq,
+                        if color == Color::White {
+                            Color::Black
+                        } else {
+                            Color::White
+                        },
+                    )
+                });
+
+                // Verify rook is still there
+                let rook_present =
+                    matches!(board.get_piece_at(rook_square), Some((Piece::Rook, c)) if c == color);
+
+                if squares_empty && no_check_path && rook_present {
+                    let target_square = match color {
+                        Color::White => 2,  // c1
+                        Color::Black => 58, // c8
+                    };
+                    moves.push(Moves::new(square, target_square, MoveType::Castle));
+                }
+            }
+        }
+
         moves
     }
 
@@ -325,7 +576,7 @@ impl Moves {
 
         moves
     }
-    
+
     pub fn bishop_moves(board: &Board, square: u8, color: Color) -> Vec<Moves> {
         let mut moves = Vec::new();
         let directions = [(1, 1), (1, -1), (-1, 1), (-1, -1)]; // Diagonal directions
@@ -358,13 +609,13 @@ impl Moves {
 
         moves
     }
-    
+
     pub fn queen_moves(board: &Board, square: u8, color: Color) -> Vec<Moves> {
         let mut moves = Vec::new();
 
         moves.extend(Self::rook_moves(board, square, color));
         moves.extend(Self::bishop_moves(board, square, color));
-        
+
         moves
     }
 }
