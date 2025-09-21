@@ -45,12 +45,12 @@ impl Eval {
     pub fn material_balance(board: &Board) -> i32 {
         Self::material(board, Color::White) - Self::material(board, Color::Black)
     }
-    
+
     pub fn mobility(board: &Board, color: Color) -> i32 {
         let moves = Moves::generate_all_moves(board, color);
-        moves.len() / 10 as i32
+        moves.len() as i32 * 10
     }
-    
+
     pub fn mobility_balance(board: &Board) -> i32 {
         (Self::mobility(board, Color::White) - Self::mobility(board, Color::Black))
     }
