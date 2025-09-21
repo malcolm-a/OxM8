@@ -1,4 +1,5 @@
 use oxm8::board::Board;
+use oxm8::eval::Eval;
 use oxm8::fen::{START_FEN, parse_fen, to_fen};
 use oxm8::game::ChessGame;
 use oxm8::moves::{MoveType, Moves};
@@ -129,6 +130,64 @@ fn demonstrate_engine_capabilities() {
     println!("✅ Complete chess rule implementation");
 }
 
+fn interactive_evaluation() {
+    use std::io::{self, Write};
+
+    println!("\n=== INTERACTIVE POSITION EVALUATION ===");
+    println!("Enter FEN strings to evaluate positions (or 'quit' to return to menu)");
+    println!("Examples:");
+    println!("  Starting position: rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
+    println!("  After 1.e4: rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1");
+
+    loop {
+        print!("\nEnter FEN: ");
+        io::stdout().flush().unwrap();
+
+        let mut input = String::new();
+        if io::stdin().read_line(&mut input).is_ok() {
+            let fen = input.trim();
+
+            if fen.eq_ignore_ascii_case("quit") || fen.is_empty() {
+                break;
+            }
+
+            match parse_fen(fen) {
+                Ok(board) => {
+                    println!("\n--- Position ---");
+                    board.display();
+
+                    let eval_score = Eval::evaluate(&board);
+                    let material_balance = Eval::material_balance(&board);
+                    let mobility_balance = Eval::mobility_balance(&board);
+
+                    println!("--- Evaluation Breakdown ---");
+                    println!("Material balance: {} centipawns", material_balance);
+                    println!("Mobility balance: {} centipawns", mobility_balance);
+                    println!("Total evaluation: {} centipawns", eval_score);
+
+                    if eval_score > 0 {
+                        println!(
+                            "Position favors White by {:.2} pawns",
+                            eval_score as f32 / 100.0
+                        );
+                    } else if eval_score < 0 {
+                        println!(
+                            "Position favors Black by {:.2} pawns",
+                            (-eval_score) as f32 / 100.0
+                        );
+                    } else {
+                        println!("Position is roughly equal");
+                    }
+                }
+                Err(e) => {
+                    println!("Error parsing FEN: {}", e);
+                    println!("Please enter a valid FEN string.");
+                }
+            }
+        }
+    }
+}
+
 fn main() {
     println!("🏰 Welcome to OxM8 Chess Engine! 🏰");
 
@@ -138,7 +197,7 @@ fn main() {
     // Ask user what they want to do
     println!("\nWhat would you like to do?");
     println!("1. Play interactive chess game");
-    println!("2. Run engine demonstrations");
+    println!("2. Evaluate chess positions (FEN input)");
     println!("3. Exit");
 
     use std::io::{self, Write};
@@ -154,10 +213,7 @@ fn main() {
                 game.run();
             }
             "2" => {
-                println!("\nRunning additional engine demonstrations...");
-                // Could add more advanced demonstrations here
-                println!("Check the source code and tests for more examples!");
-                println!("Run 'cargo test' to see comprehensive test coverage.");
+                interactive_evaluation();
             }
             "3" | "" => {
                 println!("Thanks for checking out OxM8 Chess! 👋");
