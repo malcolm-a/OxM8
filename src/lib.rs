@@ -1,4 +1,5 @@
 pub mod board;
+pub mod eval;
 pub mod fen;
 pub mod game;
 pub mod moves;
@@ -12,4 +13,3 @@ pub use board::Board;
 pub use game::ChessGame;
 pub use moves::Moves;
 pub use piece::{Color, Piece};
-
