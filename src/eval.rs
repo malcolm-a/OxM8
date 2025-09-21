@@ -1,20 +1,18 @@
 use crate::board::Board;
-use crate::piece::{Piece, Color};
-use crate::moves::{Moves, MoveType};
+use crate::moves::{MoveType, Moves};
+use crate::piece::{Color, Piece};
 
-const PAWN_VALUE: i8 = 1;
-const KNIGHT_VALUE: i8 = 3;
-const BISHOP_VALUE: i8 = 3;
-const ROOK_VALUE: i8 = 5;
-const QUEEN_VALUE: i8 = 9;
-const KING_VALUE: i8 = 0;
+const PAWN_VALUE: i32 = 100;
+const KNIGHT_VALUE: i32 = 300;
+const BISHOP_VALUE: i32 = 300;
+const ROOK_VALUE: i32 = 500;
+const QUEEN_VALUE: i32 = 900;
+const KING_VALUE: i32 = 0;
 
-pub struct Eval {
-    
-}
+pub struct Eval {}
 
 impl Eval {
-    pub fn match_piece_value(piece: Piece) -> i8 {
+    pub fn match_piece_value(piece: Piece) -> i32 {
         match piece {
             Piece::Pawn => PAWN_VALUE,
             Piece::Knight => KNIGHT_VALUE,
@@ -24,22 +22,22 @@ impl Eval {
             Piece::King => KING_VALUE,
         }
     }
-    
+
     pub fn material(board: &Board, color: Color) -> i32 {
         match color {
             Color::White => {
-                board.white_pawns.count_ones() as i32 * PAWN_VALUE as i32
-                    + board.white_knights.count_ones() as i32 * KNIGHT_VALUE as i32
-                    + board.white_bishops.count_ones() as i32 * BISHOP_VALUE as i32
-                    + board.white_rooks.count_ones() as i32 * ROOK_VALUE as i32
-                    + board.white_queens.count_ones() as i32 * QUEEN_VALUE as i32
+                board.white_pawns.count_ones() as i32 * PAWN_VALUE
+                    + board.white_knights.count_ones() as i32 * KNIGHT_VALUE
+                    + board.white_bishops.count_ones() as i32 * BISHOP_VALUE
+                    + board.white_rooks.count_ones() as i32 * ROOK_VALUE
+                    + board.white_queens.count_ones() as i32 * QUEEN_VALUE
             }
             Color::Black => {
-                board.black_pawns.count_ones() as i32 * PAWN_VALUE as i32
-                    + board.black_knights.count_ones() as i32 * KNIGHT_VALUE as i32
-                    + board.black_bishops.count_ones() as i32 * BISHOP_VALUE as i32
-                    + board.black_rooks.count_ones() as i32 * ROOK_VALUE as i32
-                    + board.black_queens.count_ones() as i32 * QUEEN_VALUE as i32
+                board.black_pawns.count_ones() as i32 * PAWN_VALUE
+                    + board.black_knights.count_ones() as i32 * KNIGHT_VALUE
+                    + board.black_bishops.count_ones() as i32 * BISHOP_VALUE
+                    + board.black_rooks.count_ones() as i32 * ROOK_VALUE
+                    + board.black_queens.count_ones() as i32 * QUEEN_VALUE
             }
         }
     }
