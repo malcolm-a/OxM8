@@ -52,9 +52,85 @@ impl Eval {
     }
 
     pub fn mobility_balance(board: &Board) -> i32 {
-        (Self::mobility(board, Color::White) - Self::mobility(board, Color::Black))
+        Self::mobility(board, Color::White) - Self::mobility(board, Color::Black)
     }
-    
-    
-    
+
+    pub fn pawn_structure(board: &Board, color: Color) -> i32 {
+        let mut score = 0;
+        let (pawns, enemy_pawns) = match color {
+            Color::White => (board.white_pawns, board.black_pawns),
+            Color::Black => (board.black_pawns, board.white_pawns),
+        };
+
+        for i in 0..64 {
+            if (pawns & (1 << i)) != 0 {
+                // Isolated pawn
+                let file = i % 8;
+                let mut is_isolated = true;
+                if file > 0 && (pawns & (1 << (i - 1))) != 0 {
+                    is_isolated = false;
+                }
+                if file < 7 && (pawns & (1 << (i + 1))) != 0 {
+                    is_isolated = false;
+                }
+                if is_isolated {
+                    score -= 30;
+                }
+
+                // Doubled pawn
+                let rank = i / 8;
+                for r in 0..rank {
+                    if (pawns & (1 << (r * 8 + file))) != 0 {
+                        score -= 20;
+                        break;
+                    }
+                }
+
+                // Passed pawn
+                let mut is_passed = true;
+
+                // Check correct direction based on color
+                let ranks_to_check: Vec<usize> = match color {
+                    Color::White => (rank + 1..8).collect(), // White moves up (toward rank 7)
+                    Color::Black => (0..rank).rev().collect(), // Black moves down (toward rank 0)
+                };
+
+                for r in ranks_to_check {
+                    // Check same file
+                    if (enemy_pawns & (1 << (r * 8 + file))) != 0 {
+                        is_passed = false;
+                        break;
+                    }
+
+                    // Check left diagonal file
+                    if file > 0 && (enemy_pawns & (1 << (r * 8 + file - 1))) != 0 {
+                        is_passed = false;
+                        break;
+                    }
+
+                    // Check right diagonal file
+                    if file < 7 && (enemy_pawns & (1 << (r * 8 + file + 1))) != 0 {
+                        is_passed = false;
+                        break;
+                    }
+                }
+
+                if is_passed {
+                    score += 30;
+                }
+            }
+        }
+
+        score
+    }
+
+    pub fn evaluate(board: &Board) -> i32 {
+        let material = Self::material_balance(board);
+        let mobility = Self::mobility_balance(board);
+        let white_pawn_structure = Self::pawn_structure(board, Color::White);
+        let black_pawn_structure = Self::pawn_structure(board, Color::Black);
+        let pawn_structure = white_pawn_structure - black_pawn_structure;
+
+        material + mobility + pawn_structure
+    }
 }
