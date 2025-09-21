@@ -1,6 +1,7 @@
-use crate::piece::{Piece, Color, piece_to_sp_char};
 use crate::fen::*;
+use crate::piece::{Color, Piece, piece_to_sp_char};
 
+#[derive(Clone, Copy)]
 pub struct Board {
     pub white_pawns: u64,
     pub white_knights: u64,
@@ -16,15 +17,14 @@ pub struct Board {
     pub black_queens: u64,
     pub black_king: u64,
 
-    pub to_move: bool,          // true for white
-    pub halfmove_clock: u16,    
-    pub fullmove_number: u16,   
+    pub to_move: bool, // true for white
+    pub halfmove_clock: u16,
+    pub fullmove_number: u16,
     pub en_passant: Option<u8>, // index 0..63
     pub castling_rights: u8,    // 4 bits: KQkq
 }
 
 impl Board {
-    
     pub fn new() -> Self {
         Self {
             white_pawns: 0,
@@ -48,7 +48,7 @@ impl Board {
             castling_rights: 0b1111,
         }
     }
-    
+
     pub fn get_bb(&self, piece: Piece, color: Color) -> u64 {
         match (piece, color) {
             (Piece::Pawn, Color::White) => self.white_pawns,
@@ -65,7 +65,7 @@ impl Board {
             (Piece::King, Color::Black) => self.black_king,
         }
     }
-    
+
     fn get_bb_mut(&mut self, piece: Piece, color: Color) -> &mut u64 {
         match (piece, color) {
             (Piece::Pawn, Color::White) => &mut self.white_pawns,
@@ -87,12 +87,12 @@ impl Board {
         let bitboard = self.get_bb_mut(piece, color);
         *bitboard |= 1 << square;
     }
-    
+
     pub fn remove_piece(&mut self, piece: Piece, color: Color, square: u8) {
         let bitboard = self.get_bb_mut(piece, color);
         *bitboard &= !(1 << square);
     }
-    
+
     pub fn get_piece_at(&self, square: u8) -> Option<(Piece, Color)> {
         if self.white_pawns & (1 << square) != 0 { return Some((Piece::Pawn, Color::White)); }
         if self.white_knights & (1 << square) != 0 { return Some((Piece::Knight, Color::White)); }
@@ -108,7 +108,7 @@ impl Board {
         if self.black_king & (1 << square) != 0 { return Some((Piece::King, Color::Black)); }
         None
     }
-    
+
     pub fn display(&self) {
         let mut board = String::new();
         for rank in (0..8).rev() {
@@ -124,24 +124,36 @@ impl Board {
         }
         println!("{}", board);
     }
-    
+
     pub fn from_fen(fen: &str) -> Self {
         parse_fen(fen).expect("Invalid FEN string")
     }
-    
+
     pub fn get_all_pieces(&self, color: Color) -> u64 {
         match color {
-            Color::White => self.white_pawns | self.white_knights | self.white_bishops 
-                         | self.white_rooks | self.white_queens | self.white_king,
-            Color::Black => self.black_pawns | self.black_knights | self.black_bishops 
-                         | self.black_rooks | self.black_queens | self.black_king,
+            Color::White => {
+                self.white_pawns
+                    | self.white_knights
+                    | self.white_bishops
+                    | self.white_rooks
+                    | self.white_queens
+                    | self.white_king
+            }
+            Color::Black => {
+                self.black_pawns
+                    | self.black_knights
+                    | self.black_bishops
+                    | self.black_rooks
+                    | self.black_queens
+                    | self.black_king
+            }
         }
     }
-    
+
     pub fn get_all_occupied(&self) -> u64 {
         self.get_all_pieces(Color::White) | self.get_all_pieces(Color::Black)
     }
-    
+
     pub fn get_piece_squares(&self, color: Color, piece: Piece) -> Vec<u8> {
         let mut squares = Vec::new();
         let bitboard = self.get_bb(piece, color);
@@ -168,7 +180,7 @@ impl Board {
                 self.remove_piece(piece, color, mv.from);
                 // Add piece to destination square
                 self.set_piece(piece, color, mv.to);
-            },
+            }
 
             MoveType::Capture => {
                 // Remove captured piece
@@ -179,7 +191,7 @@ impl Board {
                 self.remove_piece(piece, color, mv.from);
                 // Add piece to destination square
                 self.set_piece(piece, color, mv.to);
-            },
+            }
 
             MoveType::Double => {
                 // Remove piece from source square
@@ -193,7 +205,7 @@ impl Board {
                     mv.from - 8
                 };
                 self.en_passant = Some(en_passant_square);
-            },
+            }
 
             MoveType::EnPassant => {
                 // Remove piece from source square
@@ -206,18 +218,26 @@ impl Board {
                 } else {
                     mv.to + 8
                 };
-                let enemy_color = if color == Color::White { Color::Black } else { Color::White };
+                let enemy_color = if color == Color::White {
+                    Color::Black
+                } else {
+                    Color::White
+                };
                 self.remove_piece(Piece::Pawn, enemy_color, captured_pawn_square);
-            },
+            }
 
-            MoveType::Promotion { piece: promoted_piece } => {
+            MoveType::Promotion {
+                piece: promoted_piece,
+            } => {
                 // Remove pawn from source square
                 self.remove_piece(Piece::Pawn, color, mv.from);
                 // Add promoted piece to destination square
                 self.set_piece(promoted_piece, color, mv.to);
-            },
+            }
 
-            MoveType::PromotionCapture { piece: promoted_piece } => {
+            MoveType::PromotionCapture {
+                piece: promoted_piece,
+            } => {
                 // Remove captured piece
                 if let Some((captured_piece, captured_color)) = self.get_piece_at(mv.to) {
                     self.remove_piece(captured_piece, captured_color, mv.to);
@@ -226,17 +246,59 @@ impl Board {
                 self.remove_piece(Piece::Pawn, color, mv.from);
                 // Add promoted piece to destination square
                 self.set_piece(promoted_piece, color, mv.to);
-            },
+            }
 
             MoveType::Castle => {
-                // Castle logic will be implemented later
-                todo!("Castle moves not yet implemented");
-            },
+                // Move the king
+                self.remove_piece(piece, color, mv.from);
+                self.set_piece(piece, color, mv.to);
+
+                // Move the rook
+                let (rook_from, rook_to) = match (color, mv.to) {
+                    (Color::White, 6) => (7, 5),    // White kingside: rook from h1 to f1
+                    (Color::White, 2) => (0, 3),    // White queenside: rook from a1 to d1
+                    (Color::Black, 62) => (63, 61), // Black kingside: rook from h8 to f8
+                    (Color::Black, 58) => (56, 59), // Black queenside: rook from a8 to d8
+                    _ => panic!("Invalid castling move"),
+                };
+
+                self.remove_piece(Piece::Rook, color, rook_from);
+                self.set_piece(Piece::Rook, color, rook_to);
+
+                // Remove all castling rights for this color
+                match color {
+                    Color::White => self.castling_rights &= 0b1100, // Remove KQ, keep kq
+                    Color::Black => self.castling_rights &= 0b0011, // Remove kq, keep KQ
+                }
+            }
         }
 
         // Clear en passant if it's not a double pawn move
         if !matches!(mv.move_type, MoveType::Double) {
             self.en_passant = None;
+        }
+
+        // Update castling rights based on piece moves
+        match (piece, color, mv.from) {
+            // King moves - remove all castling rights for this color
+            (Piece::King, Color::White, 4) => self.castling_rights &= 0b1100, // Remove KQ
+            (Piece::King, Color::Black, 60) => self.castling_rights &= 0b0011, // Remove kq
+
+            // Rook moves - remove specific castling rights
+            (Piece::Rook, Color::White, 0) => self.castling_rights &= 0b1101, // Remove Q (queenside)
+            (Piece::Rook, Color::White, 7) => self.castling_rights &= 0b1110, // Remove K (kingside)
+            (Piece::Rook, Color::Black, 56) => self.castling_rights &= 0b0111, // Remove q (queenside)
+            (Piece::Rook, Color::Black, 63) => self.castling_rights &= 0b1011, // Remove k (kingside)
+            _ => {}
+        }
+
+        // If a rook is captured, remove castling rights
+        match mv.to {
+            0 => self.castling_rights &= 0b1101, // White queenside rook captured
+            7 => self.castling_rights &= 0b1110, // White kingside rook captured
+            56 => self.castling_rights &= 0b0111, // Black queenside rook captured
+            63 => self.castling_rights &= 0b1011, // Black kingside rook captured
+            _ => {}
         }
 
         // Update turn
@@ -248,7 +310,12 @@ impl Board {
         }
 
         // Update halfmove clock (reset on pawn moves or captures)
-        if piece == Piece::Pawn || matches!(mv.move_type, MoveType::Capture | MoveType::EnPassant | MoveType::PromotionCapture { .. }) {
+        if piece == Piece::Pawn
+            || matches!(
+                mv.move_type,
+                MoveType::Capture | MoveType::EnPassant | MoveType::PromotionCapture { .. }
+            )
+        {
             self.halfmove_clock = 0;
         } else {
             self.halfmove_clock += 1;
