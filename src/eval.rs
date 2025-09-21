@@ -124,13 +124,68 @@ impl Eval {
         score
     }
 
+    pub fn pawn_structure_balance(board: &Board) -> i32 {
+        Self::pawn_structure(board, Color::White) - Self::pawn_structure(board, Color::Black)
+    }
+
     pub fn evaluate(board: &Board) -> i32 {
         let material = Self::material_balance(board);
         let mobility = Self::mobility_balance(board);
-        let white_pawn_structure = Self::pawn_structure(board, Color::White);
-        let black_pawn_structure = Self::pawn_structure(board, Color::Black);
-        let pawn_structure = white_pawn_structure - black_pawn_structure;
+        let pawn_structure = Self::pawn_structure_balance(board);
 
         material + mobility + pawn_structure
+    }
+
+    pub fn alpha_beta(
+        board: &Board,
+        depth: u8,
+        alpha: i32,
+        beta: i32,
+        maximizing_player: bool,
+    ) -> i32 {
+        if depth == 0 {
+            return Self::evaluate(board);
+        }
+
+        let color = if maximizing_player {
+            Color::White
+        } else {
+            Color::Black
+        };
+        let moves = Moves::generate_all_moves(board, color);
+
+        if maximizing_player {
+            let mut max_eval = i32::MIN;
+            let mut alpha = alpha;
+
+            for mv in moves {
+                let mut new_board = board.clone();
+                new_board.make_move(&mv);
+                let eval = Self::alpha_beta(&new_board, depth - 1, alpha, beta, false);
+                max_eval = max_eval.max(eval);
+                alpha = alpha.max(eval);
+                if beta <= alpha {
+                    break; // Beta cut-off
+                }
+            }
+
+            max_eval
+        } else {
+            let mut min_eval = i32::MAX;
+            let mut beta = beta;
+
+            for mv in moves {
+                let mut new_board = board.clone();
+                new_board.make_move(&mv);
+                let eval = Self::alpha_beta(&new_board, depth - 1, alpha, beta, true);
+                min_eval = min_eval.min(eval);
+                beta = beta.min(eval);
+                if beta <= alpha {
+                    break; // Alpha cut-off
+                }
+            }
+
+            min_eval
+        }
     }
 }
