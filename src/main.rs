@@ -13,6 +13,63 @@ fn test_fen(fen: &str) {
     }
 }
 
+fn test_specific_position() {
+    println!("\n=== TESTING SPECIFIC POSITION ===");
+    let fen = "r1bqr1k1/ppp1bppp/2pn4/4N1B1/3P4/2N5/PPP2PPP/R2QR1K1 b - - 4 10";
+
+    println!("Testing FEN: {}", fen);
+
+    match parse_fen(fen) {
+        Ok(board) => {
+            println!("\n--- Position ---");
+            board.display();
+            println!(
+                "Side to move: {}",
+                if board.to_move { "White" } else { "Black" }
+            );
+
+            let eval_score = Eval::alpha_beta(&board, 1, -10000, 10000, board.to_move);
+            // Convert to White's perspective for display
+            let eval_from_white_pov = if board.to_move {
+                eval_score
+            } else {
+                -eval_score
+            };
+            let material_balance = Eval::material_balance(&board);
+            let mobility_balance = Eval::mobility_balance(&board);
+            let static_eval = Eval::evaluate(&board);
+            let pawn_structure = Eval::pawn_structure_balance(&board);
+
+            println!("\n--- Evaluation Breakdown ---");
+            println!("Material balance: {} centipawns", material_balance);
+            println!("Mobility balance: {} centipawns", mobility_balance);
+            println!("Pawn structure: {} centipawns", pawn_structure);
+            println!("Static evaluation: {} centipawns", static_eval);
+            println!(
+                "\nTotal evaluation (depth 1): {} centipawns",
+                eval_from_white_pov
+            );
+
+            if eval_from_white_pov > 0 {
+                println!(
+                    "Position favors White by {:.2} pawns",
+                    eval_from_white_pov as f32 / 100.0
+                );
+            } else if eval_from_white_pov < 0 {
+                println!(
+                    "Position favors Black by {:.2} pawns",
+                    (-eval_from_white_pov) as f32 / 100.0
+                );
+            } else {
+                println!("Position is roughly equal");
+            }
+        }
+        Err(e) => {
+            println!("Error parsing FEN: {}", e);
+        }
+    }
+}
+
 fn demonstrate_engine_capabilities() {
     println!("\n=== OxM8 Chess Engine Capabilities ===\n");
 
@@ -156,24 +213,37 @@ fn interactive_evaluation() {
                     println!("\n--- Position ---");
                     board.display();
 
-                    let eval_score = Eval::evaluate(&board);
+                    let eval_score = Eval::alpha_beta(&board, 1, -10000, 10000, board.to_move);
+                    // Convert to White's perspective for display
+                    let eval_from_white_pov = if board.to_move {
+                        eval_score
+                    } else {
+                        -eval_score
+                    };
                     let material_balance = Eval::material_balance(&board);
                     let mobility_balance = Eval::mobility_balance(&board);
+                    let static_eval = Eval::evaluate(&board);
+                    let pawn_structure = Eval::pawn_structure_balance(&board);
 
                     println!("--- Evaluation Breakdown ---");
                     println!("Material balance: {} centipawns", material_balance);
                     println!("Mobility balance: {} centipawns", mobility_balance);
-                    println!("Total evaluation: {} centipawns", eval_score);
+                    println!("Pawn structure: {} centipawns", pawn_structure);
+                    println!("Static evaluation: {} centipawns", static_eval);
+                    println!(
+                        "\nTotal evaluation (in-depth): {} centipawns",
+                        eval_from_white_pov
+                    );
 
-                    if eval_score > 0 {
+                    if eval_from_white_pov > 0 {
                         println!(
                             "Position favors White by {:.2} pawns",
-                            eval_score as f32 / 100.0
+                            eval_from_white_pov as f32 / 100.0
                         );
-                    } else if eval_score < 0 {
+                    } else if eval_from_white_pov < 0 {
                         println!(
                             "Position favors Black by {:.2} pawns",
-                            (-eval_score) as f32 / 100.0
+                            (-eval_from_white_pov) as f32 / 100.0
                         );
                     } else {
                         println!("Position is roughly equal");
@@ -190,6 +260,9 @@ fn interactive_evaluation() {
 
 fn main() {
     println!("🏰 Welcome to OxM8 Chess Engine! 🏰");
+
+    // Test the specific position first
+    test_specific_position();
 
     // Show engine capabilities
     demonstrate_engine_capabilities();
